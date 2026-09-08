@@ -1,11 +1,9 @@
 package com.otfly.auth;
 
-import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
 import java.util.concurrent.TimeUnit;
 
-import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
@@ -47,9 +45,15 @@ public class AuthCallbackServer
             server.stop(0);
         });
 
-        server.start();
-
-        return codeFuture.get(60, TimeUnit.SECONDS);
+        try
+        {
+            server.start();
+            return codeFuture.get(60, TimeUnit.SECONDS);
+        }
+        finally
+        {
+            server.stop(0);
+        }
     }
 
     private static String getQueryParam(String query, String param)
