@@ -2,10 +2,12 @@ package com.otfly.auth;
 
 import com.otfly.auth.OAuthHandler;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.StringJoiner;
 import java.util.Map;
 import java.util.LinkedHashMap;
-
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
 public class SpotifyAuthService 
 {
     private final String clientId;
@@ -28,15 +30,22 @@ public class SpotifyAuthService
     final String constructAuthorizationURL(String codeChal)
     {
         Map<String, String> pairs = new LinkedHashMap<>();
+        String baseEndpoint = "https://accounts.spotify.com/authorize";
 
         generateState();
         generateVerifier();
         String code = oAuthHandler.codeChallenge(codeVerifier);
 
-        pairs.put(clientId, code);
-        pairs.put(redirectUri, scope);
-        pairs.put(codeChal, codeChalMethod);
-        pairs.put(state, )
+        pairs.put("client_id", clientId);
+        pairs.put("response_type", code);
+        pairs.put("redirect_uri", redirectUri);
+        pairs.put("code_challenge", codeChal);
+        pairs.put("code_challenge_method", codeChalMethod);
+        pairs.put("state", state);
+
+        String query = buildQueryString(pairs);
+
+        return baseEndpoint + "?" + query;
     }
 
     private void generateState()
@@ -49,9 +58,27 @@ public class SpotifyAuthService
         codeVerifier = oAuthHandler.generateRandomString(64);
     }
 
-    private String buildQueryString(Map<String, String> pairs)
+    private static String buildQueryString(Map<String, String> pairs)
     {
+        if(pairs == null)
+            throw new IllegalArgumentException("Pairs map cannot be null.");
 
+        StringJoiner joiner = new StringJoiner("&");
+        for(Map.Entry<String, String> entry : pairs.entrySet())
+        {
+            String key = entry.getKey();
+            String value = entry.getValue();
+
+            if(key == null || value == null)
+                throw new IllegalArgumentException("Query string keys and values cannot be null.");
+
+            String encodedKey = URLEncoder.encode(key, StandardCharsets.UTF_8).replace("+", "%20");
+            String encodedValue = URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20");
+
+            joiner.add(encodedKey + "=" + encodedValue);
+        }
+
+        return joiner.toString();
     }
 
 }
