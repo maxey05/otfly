@@ -1,13 +1,12 @@
 package com.otfly.auth;
 
-import com.otfly.auth.OAuthHandler;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.StringJoiner;
 import java.util.Map;
 import java.util.LinkedHashMap;
-import java.net.URI;
-import java.nio.charset.StandardCharsets;
+import java.util.Objects;
+
 public class SpotifyAuthService 
 {
     private final String clientId;
@@ -15,9 +14,10 @@ public class SpotifyAuthService
     private final String scope;
     private final OAuthHandler oAuthHandler;
     private final String codeChalMethod = "S256";
+    private final String code = "code";
 
-    private String state;
-    private String codeVerifier;
+    private volatile String state;
+    private volatile String codeVerifier;
 
     public SpotifyAuthService(String id, String uri, String scope, OAuthHandler auth)
     {
@@ -27,14 +27,14 @@ public class SpotifyAuthService
         this.oAuthHandler = auth;
     }
 
-    final String constructAuthorizationURL(String codeChal)
+    final String constructAuthorizationURL()
     {
         Map<String, String> pairs = new LinkedHashMap<>();
         String baseEndpoint = "https://accounts.spotify.com/authorize";
 
         generateState();
         generateVerifier();
-        String code = oAuthHandler.codeChallenge(codeVerifier);
+        String codeChal = oAuthHandler.codeChallenge(codeVerifier);
 
         pairs.put("client_id", clientId);
         pairs.put("response_type", code);
@@ -42,6 +42,7 @@ public class SpotifyAuthService
         pairs.put("code_challenge", codeChal);
         pairs.put("code_challenge_method", codeChalMethod);
         pairs.put("state", state);
+        pairs.put("scope", scope);
 
         String query = buildQueryString(pairs);
 
@@ -81,4 +82,19 @@ public class SpotifyAuthService
         return joiner.toString();
     }
 
+    private boolean validateState(String cbState)
+    {
+        String localState = state;
+        state = null;
+
+        return Objects.equals(cbState, localState);
+    }
+
+    private String consumeCodeVerifier()
+    {
+        String localCodeVerifier = codeVerifier;
+        codeVerifier = null;
+
+        return localCodeVerifier;
+    }
 }
