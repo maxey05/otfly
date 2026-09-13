@@ -12,9 +12,9 @@ import java.net.URLDecoder;
 
 public class AuthCallbackServer 
 {
-    public static String waitCallback() throws Exception
+    public static CallbackResult waitCallback() throws Exception
     {
-        CompletableFuture<String> codeFuture = new CompletableFuture<>();
+        CompletableFuture<CallbackResult> codeFuture = new CompletableFuture<>();
 
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 8888), 0);
 
@@ -28,7 +28,7 @@ public class AuthCallbackServer
             if(error != null)
                 codeFuture.completeExceptionally(new Exception(error));
             else
-                codeFuture.complete(code);
+                codeFuture.complete(new CallbackResult(code, state));
 
             String response = error != null
                     ? "Authentication failed."
