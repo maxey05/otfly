@@ -30,12 +30,12 @@ public final class OAuthHandler
         return result.toString();
     }
 
-    final boolean validVerifier(String verifier)
+    private boolean validVerifier(String verifier)
     {
         return verifier.length() >=  43 && verifier.length() <= 128;
     }
 
-    final byte[] sha256(String randomized)
+    private byte[] sha256(String randomized)
     {
         try
         {
@@ -48,7 +48,7 @@ public final class OAuthHandler
         }
     }
 
-    final String base64Encoder(byte[] hashed)
+    private String base64Encoder(byte[] hashed)
     {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(hashed);
     }
