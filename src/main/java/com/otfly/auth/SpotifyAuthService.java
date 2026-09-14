@@ -6,6 +6,12 @@ import java.util.StringJoiner;
 import java.util.Map;
 import java.util.LinkedHashMap;
 import java.util.Objects;
+import java.io.IOException;
+import java.awt.Desktop;
+import java.net.URI;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class SpotifyAuthService 
 {
@@ -25,6 +31,61 @@ public class SpotifyAuthService
         this.redirectUri = uri;
         this.scope = scope;
         this.oAuthHandler = auth;
+    }
+
+    final boolean authorize()
+    {
+        String stringUrl = constructAuthorizationURL();
+        URI uri = URI.create(stringUrl);
+
+        try(AuthCallbackServer callBack = new AuthCallbackServer())
+        {
+            Desktop.getDesktop().browse(uri);
+            CallbackResult callBackResult = callBack.callbackFuture().get(60, TimeUnit.SECONDS);
+            
+            if(!validateState(callBackResult.state()))
+                return false;
+            else
+            {
+                String authCode = callBackResult.code();
+                String authVerifier = consumeCodeVerifier();
+            }
+
+            return true;
+        }
+        catch(IOException e)
+        {
+            if(e.getMessage() != null && e.getMessage().contains("Port 8888 is already in use."))
+                System.err.println("Authentication failed: Port 8888 is already in use. Close the application using that port and try again.");
+            else
+                e.printStackTrace();
+
+            return false;
+        }
+        catch(TimeoutException e)
+        {
+            System.err.println("Authentication timed out waiting for callback. Please try again.");
+            return false;
+        }
+        catch(ExecutionException e)
+        {
+            String causeMessage = e.getCause() != null ? e.getCause().getMessage() : null;
+
+            if(causeMessage != null && causeMessage.contains("access_denied"))
+                System.err.println("Access denied, otfly needs permission to work.");
+            else if(causeMessage != null && causeMessage.contains("callback received neither code or error"))
+                System.err.println("Authentication callback did not return a code or error. Please try again.");
+            else
+                e.printStackTrace();
+
+            return false;
+        }
+        catch(InterruptedException e)
+        {
+            System.err.println("Authentication interrupted while waiting for callback: " + e.getMessage());
+            Thread.currentThread().interrupt();
+            return false;
+        }
     }
 
     final String constructAuthorizationURL()
